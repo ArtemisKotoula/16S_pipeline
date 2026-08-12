@@ -131,9 +131,3 @@ The pipeline logs all output to `<out_dir>/pipeline.log` (via `tee`) in addition
 - Complete and add the dada brach of the pipeline
 - Start implemetation of the qiime branch
 - Create yaml files for the conda environments
-
- 
-
-
- 
-
