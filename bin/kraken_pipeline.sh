@@ -107,7 +107,7 @@ echo "Starting visualization of Bracken results with phyloseq"
 
 activate_dada
 
-Rscript ./phyloseq.R "${bracken_outDir}/genus_abundance.tsv" "${phyloseq_outDir}"
+Rscript "${script_dir}/phyloseq.R" "${bracken_outDir}/genus_abundance.tsv" "${phyloseq_outDir}"
 
 echo "Phyloseq visualization completed. Results are in ${phyloseq_outDir}"
 
