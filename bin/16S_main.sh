@@ -19,7 +19,7 @@ log(){
     echo "[$(date '+%F %T')] --- $1"
 }
 
-# maybe check for logfile
+# Create Results Direcotry and Logfile
 mkdir -p "${out_dir}"
 logfile="${out_dir}/pipeline.log"
 
@@ -28,8 +28,7 @@ exec > >(tee -a "$logfile") 2>&1
 
 log "Starting 16S pipeline in $mode mode"
 
-
-# common steps
+# Common Preprocessing Steps
 
 log "Starting QC on raw reads"
 #source "${script_dir}/qc.sh" "${raw_data}" "${fastqc_outDir}/raw" "${multiqc_outDir}/raw" "${threads}"
@@ -38,18 +37,9 @@ log "Starting QC on raw reads"
 source "${script_dir}/parallel_qc.sh" "${raw_data}" "${fastqc_outDir}/raw" "${multiqc_outDir}/raw" "${threads}"
 log "Qc for raw reads completed. Results are in ${fastqc_outDir}/raw and ${multiqc_outDir}/raw"
 
-
 log "Starting trimming of primers from raw reads"
 source "${script_dir}/trim.sh" "${raw_data}" "${cutadapt_outDir}" "${r1_primer}" "${r2_primer}" "${threads}" 100
 log "Trimming completed. Results are in ${cutadapt_outDir}"
-
-log "Starting QC on trimmed reads"
-#source "${script_dir}/qc.sh" "${cutadapt_outDir}" "${fastqc_outDir}/trimmed" "${multiqc_outDir}/trimmed" "${threads}"
-#########################
-# TESTING NEW FASTQC FOR PARALLELIZATION
-source "${script_dir}/parallel_qc.sh" "${cutadapt_outDir}" "${fastqc_outDir}/trimmed" "${multiqc_outDir}/trimmed" "${threads}"
-log "Qc for trimmed reads completed. Results are in ${fastqc_outDir}/trimmed and ${multiqc_outDir}/trimmed" 
-
 
 # Choose analysis pipeline
 case "$mode" in
@@ -83,8 +73,6 @@ case "$mode" in
         ;;
 
 esac
-
-
 
 
 log "Pipeline completed successfully."
