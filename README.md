@@ -130,7 +130,7 @@ The pipeline logs all output to `<out_dir>/pipeline.log` (via `tee`) in addition
 - `report_fastp.sh` computes `avg_mean_l` — the average of the post-filtering R1 and R2 mean read lengths across all samples — from the fastp summary statistics it just aggregated. Later, it is used as the read-length parameter for both the Bracken database build (`bracken-build -l ${avg_mean_l}`) and every per-sample Bracken run (`bracken -r ${avg_mean_l}`), so Bracken's abundance re-distribution is matched to the actual (filtered) read length of the dataset rather than a hardcoded value.
 
 
-## TO DO
+## Future Major Releases
 
 - Complete and add the dada brach of the pipeline
 - Start implemetation of the qiime branch
