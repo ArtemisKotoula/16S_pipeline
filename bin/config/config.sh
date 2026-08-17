@@ -5,8 +5,9 @@ threads=4
 # Input raw data directory
 raw_data="./data"
 
-# Output directory 
-out_dir="./16S_results/16S_$(date '+%Y%m%d_%H%M%S')"
+# Output directory
+results_dir="./16S_results"
+out_dir="${results_dir}/16S_$(date '+%Y%m%d_%H%M%S')"
 
 # Primers
 r1_primer="CCTACGGGNGGCWGCAG"
@@ -19,7 +20,6 @@ min_reads=10 #min numbers of reads that a taxa must appear in (Default for brack
 
 # Kraken database
 kraken_db="./dbs/kraken2_silva"
-
 
 # Results directories for each step
 fastqc_outDir="${out_dir}/01_01_fastqc"
@@ -39,5 +39,8 @@ kraken_outDir="${out_dir}/03_kraken"
 krona_outDir="${kraken_outDir}/03_01_krona"
 bracken_outDir="${kraken_outDir}/03_02_bracken"
 
-
 phyloseq_outDir="${out_dir}/04_phyloseq"
+
+# a variable to control whether to skip preprocessing steps (cutadapt and fastp) if previous outputs exist
+# false by default, but will be set to true if previous outputs are found and if rerun is specified
+skip_pre=false

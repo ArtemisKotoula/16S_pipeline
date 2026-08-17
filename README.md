@@ -110,13 +110,15 @@ raw_data/
 
 ```bash
 # Kraken2/Bracken branch
-bash 16S_main.sh kraken
+bash 16S_main.sh kraken [--rerun]
  
 # DADA2 branch (requires dada2_pipeline.sh to be added to the repo)
 bash 16S_main.sh dada2
 ```
  
 The pipeline logs all output to `<out_dir>/pipeline.log` (via `tee`) in addition to the terminal.
+
+There is a `--rerun` option for the pipeline to skip the common preprocessing steps, where the previous run directory is located and if results are located within the cutadapt directory, the pipeline continues without the preprocessing of the raw files.
 
 ## Notes and known limitations
  
