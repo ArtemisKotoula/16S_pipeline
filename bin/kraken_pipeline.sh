@@ -50,6 +50,15 @@ echo "Starting Krona visualization of Kraken results..."
 
 mkdir -p "${krona_outDir}"
 
+echo "Updating krona taxonomy database..."
+# Find Krona's updateTaxonomy.sh
+krona_update=$(find "$(dirname "$(which ktImportTaxonomy)")"/.. \
+    -name updateTaxonomy.sh \
+    -type f \
+    -print -quit)
+
+"$krona_update"
+
 kr_report_files=""
 for f in "${kraken_res}/"*_kraken_output.txt; do
     sample=${f%%_*}

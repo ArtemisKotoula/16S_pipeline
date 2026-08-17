@@ -38,6 +38,7 @@ The Overview of the current, complete pipeline
 | `16S_main.sh` | Main entry point. Runs the shared QC + trimming steps, then dispatches to the pipeline branch. |
 | `config/config.sh` | Central configuration: paths, primers, thresholds, and all output directories. |
 | `config/conda.sh` | Defines helper functions (`activate_dada`, `activate_cutadapt`, `activate_kraken`) that activate the required conda environments. |
+| `config/<CONDA_ENV>_env.yml` | yml files for creating necessary conda enviromntets |
 | `parallel_qc.sh` | Runs FastQC in parallel across samples, then aggregates results with MultiQC. Used at three separate stages (raw, trimmed, filtered reads). |
 | `trim.sh` | Removes primer sequences from raw reads with `cutadapt`. |
 | `fastp.sh` | Quality/length filtering of primer-trimmed reads with `fastp` (used ahead of the Kraken branch). |
@@ -62,6 +63,9 @@ project_root/
 ├── kraken_pipeline.sh
 ├── phyloseq.R
 └── config/
+    ├── 16Scutadapt_env.yml
+    ├── 16Sdada_env.yml
+    ├── 16Skraken_env.yml
     ├── config.sh
     └── conda.sh
 ```
@@ -130,4 +134,3 @@ The pipeline logs all output to `<out_dir>/pipeline.log` (via `tee`) in addition
 
 - Complete and add the dada brach of the pipeline
 - Start implemetation of the qiime branch
-- Create yaml files for the conda environments
