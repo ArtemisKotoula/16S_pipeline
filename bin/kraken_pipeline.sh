@@ -10,9 +10,6 @@ if [[ -z "$input_dir" ]]; then
     exit 1
 fi
 
-#script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-#urce "${script_dir}/config/conda.sh"
-
 activate_kraken
 
 echo "Kraken pipeline initialized."

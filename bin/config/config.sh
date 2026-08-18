@@ -26,7 +26,13 @@ fastqc_outDir="${out_dir}/01_01_fastqc"
 multiqc_outDir="${out_dir}/01_02_multiqc"
 cutadapt_outDir="${out_dir}/02_01_cutadapt"
 
+#DADA PIPELINE
 dada2_outDir="${out_dir}/03_dada2"
+# Legths to truncate reads to for DADA2 filtering. 
+right_len=260
+left_len=220
+# DADA database
+dada_db="./dbs/dada2_silva_db/silva_nr_v138_train_set.fa.gz"
 
 fastp_outDir="${out_dir}/02_02_fastp"
 quality_threshold=20

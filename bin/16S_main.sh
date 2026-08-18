@@ -6,7 +6,7 @@ mode=${1:-}
 rerun=${2:-}
 
 if [[ -z "$mode" ]]; then
-    echo "Usage: bash 16S_main.sh [dada|kraken]"
+    echo "Usage: bash 16S_main.sh [dada|kraken] [--rerun]"
     exit 1
 fi
 
@@ -77,8 +77,13 @@ esac
 # Choose analysis pipeline
 case "$mode" in
 
-    dada2)
-        bash "${script_dir}/dada2_pipeline.sh"
+    dada)
+        log "Starting DADA2 analysis pipeline"
+
+        source "${script_dir}/dada_pipeline.sh" "${cutadapt_outDir}"
+
+        log "DADA2 analysis completed. Results are in ${dada2_outDir}"
+
         ;;
 
     kraken)
