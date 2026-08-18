@@ -4,7 +4,7 @@ A bioinformatics pipeline for processing paired-end 16S rRNA amplicon sequencing
 The pipeline will support three alternative analysis branches after primer trimming:
  
 - **Kraken2 / Bracken** branch (fully implemented in this repo) — read-based taxonomic classification, abundance re-estimation, and `phyloseq`-based visualization.
-- **DADA2** branch (not fully implemented) — ASV-based analysis.
+- **DADA2** branch (not fully implemented, viaualization pending) — ASV-based analysis.
 - **QIIME2** branch (not implemented) — ASV-based analysis.
 
 ## Pipeline Overview
@@ -19,7 +19,7 @@ The Overview of the current, complete pipeline
 
 1.3 FastQC and MultiQC on trimmed reads (parallel_qc.sh)
 
-### 2.1 Kraken Pipeline
+### 2.1 Kraken Branch
 
 2.1.1 Quality FIltering using fastp (fastp.sh)
 
@@ -30,6 +30,15 @@ The Overview of the current, complete pipeline
 2.1.4 Kraken2 classification, Krona visualization and Bracken re-estimation (kraken_pipeline.sh)
 
 2.1.5 Statistics and plots visualization with phyloseq (phyloseq.R)
+
+### 2.2 Dada2 Branch
+
+2.2.1 Create quality plots for reads (dada2.R)
+
+2.2.2 Filter and Trim right and left reads to fixed length (dada2.R)
+
+2.2.3 DADA2 classification (dada2.R)
+
 
 ## Repository Structure
 
@@ -46,6 +55,8 @@ The Overview of the current, complete pipeline
 | `calc_cutoff.py` | Computes the minimum number of reads needed to detect a taxon at a given frequency and confidence level (binomial survival function), used by `report_fastp.sh`. |
 | `kraken_pipeline.sh` | Runs Kraken2 classification, builds a Krona plot, builds/runs Bracken, combines Bracken output across samples, and calls `phyloseq.R`. |
 | `phyloseq.R` | Builds a `phyloseq` object from the combined Bracken table and produces genus barplots, heatmaps, PCoA ordination with PERMANOVA/`betadisper`, and alpha-diversity plots. |
+| `dada_pipeline.sh` | Runs the DADA2 classification through calling `dada2.R` |
+| `dada2.R` | The R script that filters the reads, lerans the error rates, runs the dada algorithm, and assigns taxonomy. |
 
 
 ## Repository / directory layout expected by the scripts
@@ -53,21 +64,23 @@ The Overview of the current, complete pipeline
 `16S_main.sh` sources its configuration from a `config/` subdirectory relative to its own location:
  
 ```
-project_root/
-├── 16S_main.sh
-├── parallel_qc.sh
-├── trim.sh
-├── fastp.sh
-├── report_fastp.sh
-├── calc_cutoff.py
-├── kraken_pipeline.sh
-├── phyloseq.R
-└── config/
+bin/
+|── config/
     ├── 16Scutadapt_env.yml
     ├── 16Sdada_env.yml
     ├── 16Skraken_env.yml
     ├── config.sh
     └── conda.sh
+├── 16S_main.sh
+├── calc_cutoff.py
+├── dada_pipeline.sh
+├── dada2.R
+├── fastp.sh
+├── kraken_pipeline.sh
+├── parallel_qc.sh
+├── phyloseq.R
+├── report_fastp.sh
+└── trim.sh
 ```
 
  ## Configuration (`config/config.sh`)
@@ -83,12 +96,14 @@ All paths, primers, and thresholds live in one file:
 | `frequency` | Expected minimum taxon frequency for the depth cutoff calculation | `0.01` |
 | `confidence` | Required detection probability for the depth cutoff calculation | `0.99` |
 | `min_reads` | Minimum reads a taxon must have to be considered present | `10` |
-| `kraken_db` | Path to a pre-built Kraken2 database | — |
+| `kraken_db`, `dada_db` | Paths to pre-built Kraken2 and DADA2 databases| — |
 | `quality_threshold` | Mean-quality cutoff passed to fastp (`--cut_right_mean_quality`) | `20` |
 | `min_length` | Minimum read length passed to fastp / cutadapt | `100` |
-| `fastqc_outDir`, `multiqc_outDir`, `cutadapt_outDir`, `fastp_outDir`, `report_fastp_outDir`, `calc_cutoff_outDir`, `kraken_outDir`, `krona_outDir`, `bracken_outDir`, `phyloseq_outDir` | Per-step output subdirectories, all nested under `out_dir` | — |
+| `right_len`, `left_len` | Lengths at which the right and left reads will be truncates at for DADA2 filtering | 260, 220 |
+| `fastqc_outDir`, `multiqc_outDir`, `cutadapt_outDir`, `fastp_outDir`, `report_fastp_outDir`, `calc_cutoff_outDir`, `kraken_outDir`, `krona_outDir`, `bracken_outDir`, `phyloseq_outDir`, `dada2_outDir` | Per-step output subdirectories, all nested under `out_dir` | — |
+| `skip_pre` | A boolean variable that is used when run with the --rerun option to skip the preprocessing steps. Is by defailt "false" and changes automatically. | `false` |
  
-Edit these values (in particular `raw_data`, `out_dir`, `kraken_db`, and the primer sequences) before running the pipeline.
+Edit these values (in particular `raw_data`, `out_dir`, `kraken_db` / `dada_db`, and the primer sequences) before running the pipeline.
 
  
 ## Expected input structure
@@ -109,11 +124,7 @@ raw_data/
 ## Usage
 
 ```bash
-# Kraken2/Bracken branch
-bash 16S_main.sh kraken [--rerun]
- 
-# DADA2 branch (requires dada2_pipeline.sh to be added to the repo)
-bash 16S_main.sh dada2
+bash 16S_main.sh "kraken|dada" [--rerun]
 ```
  
 The pipeline logs all output to `<out_dir>/pipeline.log` (via `tee`) in addition to the terminal.
@@ -126,13 +137,14 @@ There is a `--rerun` option for the pipeline to skip the common preprocessing st
 - **`combine_bracken_outputs.py` requires a local modification.** Per the comment in `kraken_pipeline.sh`, the stock script must be patched to append the taxon ID to the name (`name = f"{name}-{taxid}"`) to avoid duplicate row names when combining outputs — otherwise `phyloseq.R` will fail to build unique taxa names.
 - **Sample grouping in `phyloseq.R`** is inferred from sample names via the regex `^[0-9]*([A-Z]+).*` (leading digits stripped, then leading uppercase letters taken as the group). Rename samples accordingly, or adjust this regex if your sample naming convention differs.
 - **Primers** in the default config should be updated according to amplicon region.
-- A Kraken2 database (`kraken_db`) must be built/downloaded separately and its path set in `config.sh` before running the `kraken` branch.
+- The databases for both Kraken and DADA must be built/downloaded separately and their path set in `config.sh` before running.
 
 - **How the depth cutoff is calculated.** `calc_cutoff.py` finds the minimum total read count `N` needed so that a taxon at relative abundance `frequency` has at least a `confidence` probability of getting `min_reads` reads, using a Binomial(N, `frequency`) model. `report_fastp.sh` then moves any sample below that cutoff, from the fastp output directory into a "failed cutoff samples" directory, so that it is not included in the downstream analysis.
 - `report_fastp.sh` computes `avg_mean_l` — the average of the post-filtering R1 and R2 mean read lengths across all samples — from the fastp summary statistics it just aggregated. Later, it is used as the read-length parameter for both the Bracken database build (`bracken-build -l ${avg_mean_l}`) and every per-sample Bracken run (`bracken -r ${avg_mean_l}`), so Bracken's abundance re-distribution is matched to the actual (filtered) read length of the dataset rather than a hardcoded value.
 
+- In order to limit DADA to a specified number of threads, the `taskset` command is used. The dada processes are then limited to the first N threads of the system, specified by the `threads` parameter in `config.sh`.
 
 ## Future Major Releases
 
-- Complete and add the dada brach of the pipeline
+- Complete the visualization part of the dada brach of the pipeline
 - Start implemetation of the qiime branch

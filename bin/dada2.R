@@ -110,7 +110,7 @@ sum(seqtab.nochim)/sum(seqtab)
 
 getN <- function(x) sum(getUniques(x))
 track <- cbind(out, sapply(dadaFs, getN), sapply(dadaRs, getN), sapply(mergers, getN), rowSums(seqtab.nochim))
-# # If processing a single sample, remove the sapply calls: e.g. replace sapply(dadaFs_220, getN) with getN(dadaFs_220)
+
 colnames(track) <- c("input", "filtered", "denoisedF", "denoisedR", "merged", "nonchim")
 rownames(track) <- sample.names
 head(track)
