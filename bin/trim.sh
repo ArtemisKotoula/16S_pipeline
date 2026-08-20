@@ -5,7 +5,7 @@
 set -euo pipefail
 
 if [[ $# -ne 6 ]]; then
-    echo "Usage: $0 <input_dir> <output_dir> <forward_primer> <reverse_primer> <threads> <min_length>"
+    echo "Usage: $0 <input_dir> <output_dir> <forward_primer> <reverse_primer> <threads> <min_len>"
     exit 1
 fi
 
@@ -14,7 +14,7 @@ cutadapt_outDir="$2"
 r1_primer="$3"
 r2_primer="$4"
 threads="$5"
-min_length="$6"
+min_len="$6"
 
 activate_cutadapt
 
@@ -42,7 +42,7 @@ for sample_dir in "${raw_data}"/*; do
         -j "${threads}" \
         -g "${r1_primer}" \
         -G "${r2_primer}" \
-        -m "${min_length}" \
+        -m "${min_len}" \
         -o "${cutadapt_outDir}/${sample_name}/${sample_name}_R1_trimmed.fastq" \
         -p "${cutadapt_outDir}/${sample_name}/${sample_name}_R2_trimmed.fastq" \
         "${R1}" "${R2}"

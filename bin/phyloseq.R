@@ -1,7 +1,6 @@
 #!/usr/bin/env Rscript
 ##################################################################
 # Visualize the results of the 16S pipeline using phyloseq
-#
 # Will read tabels from bracken and dada pipelines and create plots and tables for visualization
 ##################################################################
 
@@ -14,8 +13,7 @@ if (length(args) < 2) {
 input_path <- args[1]
 output_dir <- args[2]
 
-cat("Reading from:", input_path, "\n")
-cat("Writing to:", output_dir, "\n")
+cat("Reading from:", input_path, "\n", "Writing to:", output_dir, "\n")
 
 # ===============================
 # Load packages
@@ -29,13 +27,7 @@ library(grid)
 # Read Bracken combined output
 # ===============================
 
-bracken <- read.delim(
-  input_path,
-  header = TRUE,
-  sep = "\t",
-  check.names = FALSE,
-  stringsAsFactors = FALSE
-)
+bracken <- read.delim(input_path, header = TRUE, sep = "\t", check.names = FALSE, stringsAsFactors = FALSE)
 
 # ===============================
 # Build OTU table
@@ -58,12 +50,7 @@ OTU <- otu_table(as.matrix(otu), taxa_are_rows = TRUE)
 # Build taxonomy table
 # ===============================
 
-tax <- data.frame(
-  Kingdom = "Bacteria",
-  Genus = sub("-.*", "", bracken$name),
-  row.names = bracken$name,
-  stringsAsFactors = FALSE
-)
+tax <- data.frame(Kingdom = "Bacteria", Genus = sub("-.*", "", bracken$name), row.names = bracken$name, stringsAsFactors = FALSE)
 
 TAX <- tax_table(as.matrix(tax))
 
@@ -71,11 +58,7 @@ TAX <- tax_table(as.matrix(tax))
 # Build sample metadata
 # ===============================
 
-meta <- data.frame(
-  SampleID = colnames(otu),
-  row.names = colnames(otu),
-  stringsAsFactors = FALSE
-)
+meta <- data.frame(SampleID = colnames(otu), row.names = colnames(otu), stringsAsFactors = FALSE)
 
 SAM <- sample_data(meta)
 
@@ -83,11 +66,7 @@ SAM <- sample_data(meta)
 # Build phyloseq object
 # ===============================
 
-ps <- phyloseq(
-  OTU,
-  TAX,
-  SAM
-)
+ps <- phyloseq(OTU, TAX, SAM)
 
 # Check object
 #print(ps)
@@ -112,15 +91,16 @@ sample_data(ps)$Group <- group
 
 # Check
 #sample_data(ps)
-
 # ===============================
 # Relative abundance
 # ===============================
+
 ps.rel <- transform_sample_counts(ps,function(x) x / sum(x))
 
 # ===============================
 # Keep top 30 genera + Other
 # ===============================
+
 # Calculate total abundance of each genus across all samples
 taxa_abundance <- taxa_sums(ps.rel)
 
@@ -147,8 +127,7 @@ if (length(other) > 0) {
   other_counts <- colSums(other_matrix)
 
   # Create OTU table for Other
-  OTHER_OTU <- otu_table(matrix(other_counts,nrow = 1,dimnames = list("Other", names(other_counts))),
-  taxa_are_rows = TRUE)
+  OTHER_OTU <- otu_table(matrix(other_counts,nrow = 1,dimnames = list("Other", names(other_counts))), taxa_are_rows = TRUE)
 
   # Create taxonomy table
   OTHER_TAX <- tax_table(matrix("Other",nrow = 1,dimnames = list("Other", "Genus")))
@@ -190,84 +169,49 @@ genus_colors["Other"] <- "grey70"
 
 #Plot Barplot
 p <- ggplot(
-plot_data,
-aes(
-x = Sample,
-y = Abundance,
-fill = Genus
-)
+plot_data, aes(
+x = Sample, y = Abundance, fill = Genus)
 ) +
 geom_bar(
-stat = "identity",
-position = "stack"
+stat = "identity", position = "stack"
 ) +
 scale_fill_manual(
-values = genus_colors,
-breaks = genus_names,
-drop = FALSE
+values = genus_colors, breaks = genus_names, drop = FALSE
 ) +
 theme_bw() +
 labs(
-x = "Sample",
-y = "Relative abundance",
-fill = "Genus"
+x = "Sample", y = "Relative abundance", fill = "Genus"
 ) +
 guides(
 fill = guide_legend(ncol = 1)
 ) +
 theme(
-axis.text.x = element_text(
-angle = 90,
-hjust = 1,
-size = 10
+axis.text.x = element_text( angle = 90, hjust = 1, size = 10
 ),
-axis.text.y = element_text(size = 12),
-legend.text = element_text(size = 10),
-legend.title = element_text(size = 12)
+axis.text.y = element_text(size = 12), legend.text = element_text(size = 10), legend.title = element_text(size = 12)
 )
 
 # Save as PDF
 ggsave(
   filename = file.path(output_dir, "genus_barplot.pdf"),
-  plot = p,
-  width = 25,
-  height = 11,
-  units = "in",
-  create.dir = TRUE
+  plot = p, width = 25, height = 11, units = "in", create.dir = TRUE
 )
 
-hetmap_top <- plot_heatmap(
-  ps.top,
-  method = "NMDS",
-  distance = "bray"
-)
+hetmap_top <- plot_heatmap(ps.top, method = "NMDS", distance = "bray")
 
 ggsave(
   filename = file.path(output_dir, "heatmap.pdf"),
-  width = 22,
-  plot = hetmap_top,
-  height = 11,
-  units = "in",
-  create.dir = TRUE
+  width = 22, plot = hetmap_top, height = 11, units = "in", create.dir = TRUE
 )
 
-bray_dist <- phyloseq::distance(
-    ps.rel,
-    method = "bray"
-)
+bray_dist <- phyloseq::distance(ps.rel, method = "bray")
 
-ordination <- ordinate(
-    ps.rel,
-    method = "PCoA",
-    distance = bray_dist
-)
-
+ordination <- ordinate(ps.rel, method = "PCoA", distance = bray_dist)
 
 ############################################################
 # PERMANOVA
 metadata <- as(sample_data(ps.rel), "data.frame")
 
-# PERMANOVA
 adonis_stats <- adonis2(bray_dist ~ Group, data = metadata)
 
 # Extract PERMANOVA results
@@ -292,17 +236,13 @@ cat("p =", permdisp_p, "\n")
 #############################################
 
 pcoa_plot <- plot_ordination(
-    ps.rel,
-    ordination,
-    color = "Group"
+    ps.rel, ordination, color = "Group"
 ) +
     geom_point(
-        size = 3,
-        alpha = 0.8
+        size = 3, alpha = 0.8
     ) +
     stat_ellipse(
-        aes(group = Group),
-        level = 0.95
+        aes(group = Group), level = 0.95
     ) +
     theme_bw() +
     labs(
@@ -313,65 +253,39 @@ pcoa_plot <- plot_ordination(
             "  |  ",
             "PERMDISP: p = ", signif(permdisp_p, 3)
         ),
-        x = "PCoA1",
-        y = "PCoA2",
-        color = "Group"
+        x = "PCoA1", y = "PCoA2", color = "Group"
     ) +
     theme(
         plot.title = element_text(
-            size = 16,
-            face = "bold",
-            hjust = 0.5
+            size = 16, face = "bold", hjust = 0.5
         ),
         plot.subtitle = element_text(
-            size = 11,
-            hjust = 0.5
+            size = 11, hjust = 0.5
         )
     )
 
 
 ggsave(
     filename = file.path(output_dir, "pcoa_plot.pdf"),
-    plot = pcoa_plot,
-    width = 16,
-    height = 9,
-    units = "in",
-    create.dir = TRUE
+    plot = pcoa_plot, width = 16, height = 9, units = "in", create.dir = TRUE
 )
 
 ##################################################
 #heatmap with not only top
-ps.heat <- filter_taxa(
-    ps.rel,
-    function(x) mean(x) > 0.001,
-    prune = TRUE
-)
+ps.heat <- filter_taxa(ps.rel, function(x) mean(x) > 0.001, prune = TRUE)
 
-heat <- plot_heatmap(
-    ps.heat,
-    method = "NMDS",
-    distance = "bray",
-    sample.label = "Group"
-)
+heat <- plot_heatmap(ps.heat, method = "NMDS", distance = "bray", sample.label = "Group")
 
 ggsave(
   filename = file.path(output_dir, "heatmap_all.pdf"),
-  plot = heat,
-  width = 16,
-  height = 9,
-  units = "in",
-  create.dir = TRUE
+  plot = heat, width = 16, height = 9, units = "in", create.dir = TRUE
 )
 
 ##################################################3
 # mupltiple alpha diversity plots
-alpha <- estimate_richness(
-    ps,
-    measures = c("Shannon", "Simpson")
-)
+alpha <- estimate_richness(ps, measures = c("Shannon", "Simpson"))
 
 alpha$Group <- sample_data(ps)$Group
-
 
 # Shannon
 p1 <- ggplot(alpha, aes(Group, Shannon, fill = Group)) +
@@ -380,9 +294,6 @@ p1 <- ggplot(alpha, aes(Group, Shannon, fill = Group)) +
   theme_bw() +
   ggtitle("Shannon diversity")
 
-#print(p1)
-
-
 # Simpson
 p2 <- ggplot(alpha, aes(Group, Simpson, fill = Group)) +
   geom_boxplot() +
@@ -390,21 +301,11 @@ p2 <- ggplot(alpha, aes(Group, Simpson, fill = Group)) +
   theme_bw() +
   ggtitle("Simpson diversity")
 
-#print(p2)
-
-
-pdf(
-  file.path(output_dir, "alpha_diversity_all.pdf"),
-  width = 12,
-  height = 6
-)
-
+pdf(file.path(output_dir, "alpha_diversity_all.pdf"), width = 12, height = 6)
 grid.newpage()
 pushViewport(viewport(layout = grid.layout(1,2)))
-
 print(p1, vp = viewport(layout.pos.col = 1))
 print(p2, vp = viewport(layout.pos.col = 2))
-
 dev.off()
 
 cat("Phyloseq analysis completed. Plots saved to:", output_dir, "\n")

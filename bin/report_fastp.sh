@@ -9,28 +9,20 @@
 set -euo pipefail
 
 if [[ $# -ne 2 ]]; then
-    echo "Usage: $0 <input_dir> <output_dir> "
+    echo "Usage: $0 <input_dir> <output_dir>"
     exit 1
 fi
 
 
 fastIn_dir="$1"
 reportOut_dir="$2"
-# freq="$3"
-# conf="$4"
 
 activate_dada
-
 
 mkdir -p "${reportOut_dir}"
 
 reportOut_file="${reportOut_dir}/fastp_reads_report.csv"
 summaryOut_file="${reportOut_dir}/fastp_summary_report.txt"
-# Activate conda environment 
-
-#activate_dada
-
-#conda activate 16S_dada
 
 ###################################3
 
@@ -62,7 +54,6 @@ for sample_dir in "${fastIn_dir}"/*; do
     filtered_r1_mean_length=$(jq '.summary.after_filtering.read1_mean_length' "${fastp_json}")
     filtered_r2_mean_length=$(jq '.summary.after_filtering.read2_mean_length' "${fastp_json}")
 
-    #sample_name="${sample_name%%_*}"
     # Append to the summary report
     echo "${sample_name},${total_reads},${filtered_reads},${r1_mean_length},${r2_mean_length},${filtered_r1_mean_length},${filtered_r2_mean_length}" >> "${reportOut_file}"
 done
@@ -106,14 +97,10 @@ echo "Minimum reads required for a taxon to be considered present: ${min_reads_r
 echo "Removing samples that do not meet the cutoff criteria and moving them to ${calc_cutoff_outDir}"
 
 # Read the summary report and filter samples based on the cutoff
-awk -F',' \
-  -v min_reads_rec="${min_reads_required}" \
-  -v In_dir="${fastIn_dir}" \
-  -v out_dir="${calc_cutoff_outDir}" \
+awk -F',' -v min_reads_rec="${min_reads_required}" -v In_dir="${fastIn_dir}" -v out_dir="${calc_cutoff_outDir}" \
   'NR>1 {
       if ($3 < min_reads_rec) {
           print $1;
           system("mv \"" In_dir "/" $1 "\" \"" out_dir "\"")
       }
-  }' \
-  "${reportOut_file}"
+  }' "${reportOut_file}"

@@ -32,9 +32,7 @@ for sample_dir in "${input_dir}"/*; do
         continue
     fi
 
-    kraken2 --db "${kraken_db}" \
-        --paired \
-        --threads "${threads}" \
+    kraken2 --db "${kraken_db}" --paired --threads "${threads}" \
         --report "${kraken_res}/${sample_name}_kraken_report.txt" \
         --output "${kraken_res}/${sample_name}_kraken_output.txt" \
         "${R1}" "${R2}"
@@ -49,10 +47,7 @@ mkdir -p "${krona_outDir}"
 
 echo "Updating krona taxonomy database..."
 # Find Krona's updateTaxonomy.sh
-krona_update=$(find "$(dirname "$(which ktImportTaxonomy)")"/.. \
-    -name updateTaxonomy.sh \
-    -type f \
-    -print -quit)
+krona_update=$(find "$(dirname "$(which ktImportTaxonomy)")"/.. -name updateTaxonomy.sh -type f -print -quit)
 
 "$krona_update"
 
@@ -68,7 +63,6 @@ ktImportTaxonomy -q 2 -t 3 "$kr_report_files" -o "${krona_outDir}/krona_all_samp
 
 echo "Krona visualization completed. Results are in ${krona_outDir}/krona_all_samples.html"
 
-
 ###########################################################s
 
 echo "Buiding Bracken database for Kraken results..."
@@ -82,7 +76,7 @@ mkdir -p "${bracken_outDir}"
 for report_file in "${kraken_res}/"*_kraken_report.txt; do
     sample_name=$(basename "${report_file}" "_kraken_report.txt")
     bracken_output="${bracken_outDir}/${sample_name}.bracken"
-    bracken -d "${kraken_db}" -i "${report_file}" -o "${bracken_output}" -r "${avg_mean_l}" -l G ##########CHANGED FORM 284 TO "${avg_mean_l}" -t 10
+    bracken -d "${kraken_db}" -i "${report_file}" -o "${bracken_output}" -r "${avg_mean_l}" -l G
 done
 
 # get the sample names from the bracken output files
@@ -106,7 +100,6 @@ combine_bracken_outputs.py --files "${bracken_outDir}"/*.bracken \
 #modified script, adding "name = f"{name}-{taxid}" after line 106 to avoid duplicate names in the combined output file
 
 echo "Bracken analysis completed. Results are in ${bracken_outDir}"
-
 
 ############################################################
 echo "Starting visualization of Bracken results with phyloseq"

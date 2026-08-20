@@ -6,12 +6,8 @@ mode=${1:-}
 rerun=${2:-}
 
 if [[ -z "$mode" ]]; then
-    echo "Usage: bash 16S_main.sh [dada|kraken] [--rerun]"
+    echo "Usage: bash 16S_main.sh 'dada|kraken' [--rerun]"
     exit 1
-fi
-
-if [[ "$rerun" == "--rerun" ]]; then
-    echo "Rerun enabled."
 fi
 
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -52,7 +48,6 @@ logfile="${out_dir}/pipeline.log"
 exec > >(tee -a "$logfile") 2>&1
 
 # Common Preprocessing Steps
-
 case "$skip_pre" in
     true)
         log "Skipping preprocessing steps. Starting with fastp from previous cutadapt results in ${cutadapt_outDir}."
@@ -65,7 +60,7 @@ case "$skip_pre" in
         log "Qc for raw reads completed. Results are in ${fastqc_outDir}/raw and ${multiqc_outDir}/raw"
 
         log "Starting trimming of primers from raw reads"
-        source "${script_dir}/trim.sh" "${raw_data}" "${cutadapt_outDir}" "${r1_primer}" "${r2_primer}" "${threads}" 100
+        source "${script_dir}/trim.sh" "${raw_data}" "${cutadapt_outDir}" "${r1_primer}" "${r2_primer}" "${threads}" "${min_length}"
         log "Trimming completed. Results are in ${cutadapt_outDir}"
 
         log "Starting QC on trimmed reads"
@@ -79,11 +74,8 @@ case "$mode" in
 
     dada)
         log "Starting DADA2 analysis pipeline"
-
         source "${script_dir}/dada_pipeline.sh" "${cutadapt_outDir}"
-
         log "DADA2 analysis completed. Results are in ${dada2_outDir}"
-
         ;;
 
     kraken)
