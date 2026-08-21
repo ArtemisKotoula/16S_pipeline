@@ -147,4 +147,4 @@ There is a `--rerun` option for the pipeline to skip the common preprocessing st
 ## Future Major Releases
 
 - Complete the visualization part of the dada branch of the pipeline
-- Start implemetation of the qiime branch
+- Start implementation of the qiime branch
