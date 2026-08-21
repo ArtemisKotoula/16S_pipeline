@@ -56,7 +56,7 @@ The Overview of the current, complete pipeline
 | `kraken_pipeline.sh` | Runs Kraken2 classification, builds a Krona plot, builds/runs Bracken, combines Bracken output across samples, and calls `phyloseq.R`. |
 | `phyloseq.R` | Builds a `phyloseq` object from the combined Bracken table and produces genus barplots, heatmaps, PCoA ordination with PERMANOVA/`betadisper`, and alpha-diversity plots. |
 | `dada_pipeline.sh` | Runs the DADA2 classification through calling `dada2.R` |
-| `dada2.R` | The R script that filters the reads, lerans the error rates, runs the dada algorithm, and assigns taxonomy. |
+| `dada2.R` | The R script that filters the reads, learns the error rates, runs the dada algorithm, and assigns taxonomy. |
 
 
 ## Repository / directory layout expected by the scripts
