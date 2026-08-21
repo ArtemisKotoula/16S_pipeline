@@ -101,7 +101,7 @@ All paths, primers, and thresholds live in one file:
 | `min_length` | Minimum read length passed to fastp / cutadapt | `100` |
 | `right_len`, `left_len` | Lengths at which the right and left reads will be truncated at for DADA2 filtering | 260, 220 |
 | `fastqc_outDir`, `multiqc_outDir`, `cutadapt_outDir`, `fastp_outDir`, `report_fastp_outDir`, `calc_cutoff_outDir`, `kraken_outDir`, `krona_outDir`, `bracken_outDir`, `phyloseq_outDir`, `dada2_outDir` | Per-step output subdirectories, all nested under `out_dir` | — |
-| `skip_pre` | A boolean variable that is used when run with the --rerun option to skip the preprocessing steps. Is by defailt "false" and changes automatically. | `false` |
+| `skip_pre` | A boolean variable that is used when run with the --rerun option to skip the preprocessing steps. Is by default "false" and changes automatically. | `false` |
  
 Edit these values (in particular `raw_data`, `out_dir`, `kraken_db` / `dada_db`, and the primer sequences) before running the pipeline.
 
