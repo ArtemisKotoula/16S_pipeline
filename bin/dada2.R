@@ -48,7 +48,6 @@ ggsave(
     filename = file.path(out_path, "quality_profileF.png"),
     create.dir = TRUE, plot = QplotF, width = 10, height = 6, dpi = 300,
 )
-    width = 10,
     height = 6,
     dpi = 300,
 )
