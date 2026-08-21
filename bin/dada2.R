@@ -55,7 +55,6 @@ QplotR <- plotQualityProfile(fnRs[1:2])
 ggsave(
     filename = file.path(out_path, "quality_profileR.png"),
     create.dir = TRUE,
-    height = 6,
     dpi = 300,
 )
 
