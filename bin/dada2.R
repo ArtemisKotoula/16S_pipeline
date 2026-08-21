@@ -55,7 +55,6 @@ QplotR <- plotQualityProfile(fnRs[1:2])
 ggsave(
     filename = file.path(out_path, "quality_profileR.png"),
     create.dir = TRUE,
-    dpi = 300,
 )
 
 filtFs <- file.path(out_path, "filtered", paste0(sample.names, "_F_filt.fastq.gz"))
