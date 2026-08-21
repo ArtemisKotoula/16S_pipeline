@@ -66,11 +66,11 @@ The Overview of the current, complete pipeline
 ```
 bin/
 |── config/
-    ├── 16Scutadapt_env.yml
-    ├── 16Sdada_env.yml
-    ├── 16Skraken_env.yml
-    ├── config.sh
-    └── conda.sh
+|    ├── 16Scutadapt_env.yml
+|    ├── 16Sdada_env.yml
+|    ├── 16Skraken_env.yml
+|    ├── config.sh
+|    └── conda.sh
 ├── 16S_main.sh
 ├── calc_cutoff.py
 ├── dada_pipeline.sh
@@ -96,11 +96,11 @@ All paths, primers, and thresholds live in one file:
 | `frequency` | Expected minimum taxon frequency for the depth cutoff calculation | `0.01` |
 | `confidence` | Required detection probability for the depth cutoff calculation | `0.99` |
 | `min_reads` | Minimum reads a taxon must have to be considered present | `10` |
-| `kraken_db`, `dada_db` | Paths to pre-built Kraken2 and DADA2 databases| — |
+| `kraken_db`, `dada_db` | Paths to pre-built Kraken2 and DADA2 databases| - |
 | `quality_threshold` | Mean-quality cutoff passed to fastp (`--cut_right_mean_quality`) | `20` |
 | `min_length` | Minimum read length passed to fastp / cutadapt | `100` |
 | `right_len`, `left_len` | Lengths at which the right and left reads will be truncated at for DADA2 filtering | 260, 220 |
-| `fastqc_outDir`, `multiqc_outDir`, `cutadapt_outDir`, `fastp_outDir`, `report_fastp_outDir`, `calc_cutoff_outDir`, `kraken_outDir`, `krona_outDir`, `bracken_outDir`, `phyloseq_outDir`, `dada2_outDir` | Per-step output subdirectories, all nested under `out_dir` | — |
+| `fastqc_outDir`, `multiqc_outDir`, `cutadapt_outDir`, `fastp_outDir`, `report_fastp_outDir`, `calc_cutoff_outDir`, `kraken_outDir`, `krona_outDir`, `bracken_outDir`, `phyloseq_outDir`, `dada2_outDir` | Per-step output subdirectories, all nested under `out_dir` | - |
 | `skip_pre` | A boolean variable that is used when run with the --rerun option to skip the preprocessing steps. Is by default "false" and changes automatically. | `false` |
  
 Edit these values (in particular `raw_data`, `out_dir`, `kraken_db` / `dada_db`, and the primer sequences) before running the pipeline.
