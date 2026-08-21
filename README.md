@@ -4,7 +4,7 @@ A bioinformatics pipeline for processing paired-end 16S rRNA amplicon sequencing
 The pipeline will support three alternative analysis branches after primer trimming:
  
 - **Kraken2 / Bracken** branch (fully implemented in this repo) — read-based taxonomic classification, abundance re-estimation, and `phyloseq`-based visualization.
-- **DADA2** branch (not fully implemented, visualization pending) — ASV-based analysis.
+- **DADA2** branch (not fully implemented, viaualization pending) — ASV-based analysis.
 - **QIIME2** branch (not implemented) — ASV-based analysis.
 
 ## Pipeline Overview
