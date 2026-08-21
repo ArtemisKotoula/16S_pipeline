@@ -46,7 +46,8 @@ QplotF <- plotQualityProfile(fnFs[1:2])
 
 ggsave(
     filename = file.path(out_path, "quality_profileF.png"),
-    create.dir = TRUE, 
+    create.dir = TRUE, plot = QplotF, width = 10, height = 6, dpi = 300,
+)
     plot = QplotF,
     width = 10,
     height = 6,
