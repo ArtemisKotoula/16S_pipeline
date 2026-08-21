@@ -99,7 +99,7 @@ All paths, primers, and thresholds live in one file:
 | `kraken_db`, `dada_db` | Paths to pre-built Kraken2 and DADA2 databases| — |
 | `quality_threshold` | Mean-quality cutoff passed to fastp (`--cut_right_mean_quality`) | `20` |
 | `min_length` | Minimum read length passed to fastp / cutadapt | `100` |
-| `right_len`, `left_len` | Lengths at which the right and left reads will be truncates at for DADA2 filtering | 260, 220 |
+| `right_len`, `left_len` | Lengths at which the right and left reads will be truncated at for DADA2 filtering | 260, 220 |
 | `fastqc_outDir`, `multiqc_outDir`, `cutadapt_outDir`, `fastp_outDir`, `report_fastp_outDir`, `calc_cutoff_outDir`, `kraken_outDir`, `krona_outDir`, `bracken_outDir`, `phyloseq_outDir`, `dada2_outDir` | Per-step output subdirectories, all nested under `out_dir` | — |
 | `skip_pre` | A boolean variable that is used when run with the --rerun option to skip the preprocessing steps. Is by defailt "false" and changes automatically. | `false` |
  
