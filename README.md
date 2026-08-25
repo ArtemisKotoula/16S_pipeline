@@ -147,4 +147,6 @@ There is a `--rerun` option for the pipeline to skip the common preprocessing st
 ## Future Major Releases
 
 - Complete the visualization part of the dada branch of the pipeline
+- Incorporate trimming with fastp as a common preprocessing step
+- Move visualization for all branches on the phyloseq.R script
 - Start implementation of the qiime branch
