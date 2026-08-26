@@ -3,8 +3,8 @@ A bioinformatics pipeline for processing paired-end 16S rRNA amplicon sequencing
  
 The pipeline will support three alternative analysis branches after primer trimming:
  
-- **Kraken2 / Bracken** branch (fully implemented in this repo) — read-based taxonomic classification, abundance re-estimation, and `phyloseq`-based visualization.
-- **DADA2** branch (not fully implemented, visualization pending) — ASV-based analysis.
+- **Kraken2 / Bracken** branch (fully implemented) — read-based taxonomic classification, abundance re-estimation, and `phyloseq`-based visualization.
+- **DADA2** branch (fully implemented) — ASV-based analysis.
 - **QIIME2** branch (not implemented) — ASV-based analysis.
 
 ## Pipeline Overview
@@ -39,6 +39,8 @@ The Overview of the current, complete pipeline
 
 2.2.3 DADA2 classification (dada2.R)
 
+2.2.4 Statistics and plots visualization with phyloseq (dada2.R)
+
 
 ## Repository Structure
 
@@ -56,7 +58,7 @@ The Overview of the current, complete pipeline
 | `kraken_pipeline.sh` | Runs Kraken2 classification, builds a Krona plot, builds/runs Bracken, combines Bracken output across samples, and calls `phyloseq.R`. |
 | `phyloseq.R` | Builds a `phyloseq` object from the combined Bracken table and produces genus barplots, heatmaps, PCoA ordination with PERMANOVA/`betadisper`, and alpha-diversity plots. |
 | `dada_pipeline.sh` | Runs the DADA2 classification through calling `dada2.R` |
-| `dada2.R` | The R script that filters the reads, learns the error rates, runs the dada algorithm, and assigns taxonomy. |
+| `dada2.R` | The R script that filters the reads, learns the error rates, runs the dada algorithm, assigns taxonomy and produces genus barplots, PCoA ordination with PERMANOVA/`betadisper`, and alpha-diversity plots. |
 
 
 ## Repository / directory layout expected by the scripts
@@ -146,7 +148,6 @@ There is a `--rerun` option for the pipeline to skip the common preprocessing st
 
 ## Future Major Releases
 
-- Complete the visualization part of the dada branch of the pipeline
 - Incorporate trimming with fastp as a common preprocessing step
 - Move visualization for all branches on the phyloseq.R script
 - Start implementation of the qiime branch
