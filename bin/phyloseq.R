@@ -20,7 +20,6 @@ cat("Reading from:", input_path, "\n", "Writing to:", output_dir, "\n")
 # ===============================
 library(phyloseq)
 library(ggplot2)
-library(gtools)
 library(vegan)
 library(grid)
 # ===============================
@@ -237,14 +236,20 @@ cat("p =", permdisp_p, "\n")
 
 pcoa_plot <- plot_ordination(
     ps.rel, ordination, color = "Group"
-) +
+    ) +
     geom_point(
         size = 3, alpha = 0.8
     ) +
     stat_ellipse(
-        aes(group = Group), level = 0.95
+        aes(group = Group, linetype = "90%"), level = 0.90
     ) +
-    theme_bw() +
+    stat_ellipse(
+        aes(group = Group, linetype = "95%"), level = 0.95
+    ) +
+    scale_linetype_manual(
+        name = "Ellipse", values = c("90%" = "dotted", "95%" = "dashed")
+    ) +
+    theme_bw()+
     labs(
         title = "PCoA of microbial community composition",
         subtitle = paste0(
