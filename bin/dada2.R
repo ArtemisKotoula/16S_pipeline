@@ -28,8 +28,8 @@ cat("Filter lengths: right =", right_length, ", left =", left_length, "\n")
 # Forward and reverse fastq filenames have format: SAMPLENAME_R1_001.fastq and SAMPLENAME_R2_001.fastq
 # They were created by cutadapt
 # path to all forward and reverse fastq files
-fnFs <- sort(list.files(path, pattern="_R1_trimmed.fastq", full.names = TRUE, recursive = TRUE))
-fnRs <- sort(list.files(path, pattern="_R2_trimmed.fastq", full.names = TRUE, recursive = TRUE))
+fnFs <- sort(list.files(path, pattern="_R1_filtered.fastq", full.names = TRUE, recursive = TRUE))
+fnRs <- sort(list.files(path, pattern="_R2_filtered.fastq", full.names = TRUE, recursive = TRUE))
 
 # Extract sample names, assuming filenames have format: SAMPLENAME_XXX.fastq
 sample.names <- sapply(strsplit(basename(fnFs), "_"), `[`, 1)
@@ -54,7 +54,7 @@ filtRs <- file.path(out_path, "filtered", paste0(sample.names, "_R_filt.fastq.gz
 names(filtFs) <- sample.names
 names(filtRs) <- sample.names
 
-out <- filterAndTrim(fnFs, filtFs, fnRs, filtRs, truncLen=c(right_length, left_length),
+out <- filterAndTrim(fnFs, filtFs, fnRs, filtRs, truncLen=c(0,0),
               maxN=0, maxEE=c(2,4), truncQ=2, rm.phix=TRUE,
               compress=TRUE, multithread=TRUE) 
 
