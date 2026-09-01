@@ -19,27 +19,28 @@ The Overview of the current, complete pipeline
 
 1.3 FastQC and MultiQC on trimmed reads (parallel_qc.sh)
 
+#### Length trimming
+
+1.4 Quality Filtering & Trimming using fastp (fastp.sh)
+
+1.5 Summarize fastp reports and remove low depth samples (report_fastp.sh and calc_cutoff.py)
+
+1.6 FastQC and MultiQC on filtered reads (parallel_qc.sh)
+
+
 ### 2.1 Kraken Branch
 
-2.1.1 Quality FIltering using fastp (fastp.sh)
+2.1.1 Kraken2 classification, Krona visualization and Bracken re-estimation (kraken_pipeline.sh)
 
-2.1.2 Summarize fastp reports and remove low depth samples (report_fastp.sh and calc_cutoff.py)
-
-2.1.3 FastQC and MultiQC on filtered reads (parallel_qc.sh)
-
-2.1.4 Kraken2 classification, Krona visualization and Bracken re-estimation (kraken_pipeline.sh)
-
-2.1.5 Statistics and plots visualization with phyloseq (phyloseq.R)
+2.1.2 Statistics and plots visualization with phyloseq (phyloseq.R)
 
 ### 2.2 Dada2 Branch
 
-2.2.1 Create quality plots for reads (dada2.R)
+2.2.1 Create quality plots and filter reads (dada2.R)
 
-2.2.2 Filter and Trim right and left reads to fixed length (dada2.R)
+2.2.2 DADA2 classification (dada2.R)
 
-2.2.3 DADA2 classification (dada2.R)
-
-2.2.4 Statistics and plots visualization with phyloseq (dada2.R)
+2.2.3 Statistics and plots visualization with phyloseq (dada2.R)
 
 
 ## Repository Structure
@@ -52,7 +53,7 @@ The Overview of the current, complete pipeline
 | `config/<CONDA_ENV>_env.yml` | yml files for creating necessary conda enviromntets |
 | `parallel_qc.sh` | Runs FastQC in parallel across samples, then aggregates results with MultiQC. Used at three separate stages (raw, trimmed, filtered reads). |
 | `trim.sh` | Removes primer sequences from raw reads with `cutadapt`. |
-| `fastp.sh` | Quality/length filtering of primer-trimmed reads with `fastp` (used ahead of the Kraken branch). |
+| `fastp.sh` | For kraken: trimming and filtering of primer-trimmed reads, based on a quality threshold with `fastp`. For dada: trimming based on fixed lengths. |
 | `report_fastp.sh` | Parses all per-sample `fastp` JSON reports into a combined CSV, computes summary statistics, calculates a minimum-read-depth cutoff, and moves under-depth samples out of the analysis set. |
 | `calc_cutoff.py` | Computes the minimum number of reads needed to detect a taxon at a given frequency and confidence level (binomial survival function), used by `report_fastp.sh`. |
 | `kraken_pipeline.sh` | Runs Kraken2 classification, builds a Krona plot, builds/runs Bracken, combines Bracken output across samples, and calls `phyloseq.R`. |
@@ -101,7 +102,7 @@ All paths, primers, and thresholds live in one file:
 | `kraken_db`, `dada_db` | Paths to pre-built Kraken2 and DADA2 databases| - |
 | `quality_threshold` | Mean-quality cutoff passed to fastp (`--cut_right_mean_quality`) | `20` |
 | `min_length` | Minimum read length passed to fastp / cutadapt | `100` |
-| `right_len`, `left_len` | Lengths at which the right and left reads will be truncated at for DADA2 filtering | 260, 220 |
+| `right_len`, `left_len` | Lengths at which the right and left reads will be truncated at for DADA2 filtering used during the `fastp` trimming step. | `260`, `220` |
 | `fastqc_outDir`, `multiqc_outDir`, `cutadapt_outDir`, `fastp_outDir`, `report_fastp_outDir`, `calc_cutoff_outDir`, `kraken_outDir`, `krona_outDir`, `bracken_outDir`, `phyloseq_outDir`, `dada2_outDir` | Per-step output subdirectories, all nested under `out_dir` | - |
 | `skip_pre` | A boolean variable that is used when run with the --rerun option to skip the preprocessing steps. Is by default "false" and changes automatically. | `false` |
  
@@ -148,6 +149,5 @@ There is a `--rerun` option for the pipeline to skip the common preprocessing st
 
 ## Future Major Releases
 
-- Incorporate trimming with fastp as a common preprocessing step
 - Move visualization for all branches on the phyloseq.R script
 - Start implementation of the qiime branch

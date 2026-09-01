@@ -38,7 +38,6 @@ case "$rerun" in
 
 esac
 
-
 log "Starting 16S pipeline in $mode mode"
 
 # Create Results Direcotry and Logfile
@@ -71,17 +70,26 @@ esac
 
 # Choose analysis pipeline
 case "$mode" in
-
     dada)
-        log "Starting DADA2 analysis pipeline"
-        source "${script_dir}/dada_pipeline.sh" "${cutadapt_outDir}"
+        log "Starting quality filtering of trimmed reads for DADA2"
+        source "${script_dir}/fastp.sh" -in "${cutadapt_outDir}" -out "${fastp_outDir}" -t "${threads}" -min_len "${min_length}" -lenR "${right_len}" -lenL "${left_len}"
+        log "Quality filtering completed. Results are in ${fastp_outDir}"
+
+        log "Generating fastp summary report"
+        source "${script_dir}/report_fastp.sh" "${fastp_outDir}" "${report_fastp_outDir}"
+        log "fastp summary report generated. Results are in ${report_fastp_outDir}. Samples that do not meet the cutoff criteria have been moved to ${calc_cutoff_outDir}"
+
+        log "Starting QC on filtered reads"
+        source "${script_dir}/parallel_qc.sh" "${fastp_outDir}" "${fastqc_outDir}/filtered" "${multiqc_outDir}/filtered" "${threads}"
+        log "Qc for filtered reads completed. Results are in ${fastqc_outDir}/filtered and ${multiqc_outDir}/filtered"
+
+        log "Starting DADA2 analysis"
+        source "${script_dir}/dada_pipeline.sh" "${fastp_outDir}"
         log "DADA2 analysis completed. Results are in ${dada2_outDir}"
         ;;
-
     kraken)
-        # Last preprocess strep for kraken: quality filtering with fastp
         log "Starting quality filtering of trimmed reads for Kraken"
-        source "${script_dir}/fastp.sh" "${cutadapt_outDir}" "${fastp_outDir}" "${threads}" "${min_length}" "${quality_threshold}"   
+        source "${script_dir}/fastp.sh" -in "${cutadapt_outDir}" -out "${fastp_outDir}" -t "${threads}" -min_len "${min_length}" -qt "${quality_threshold}"   
         log "Quality filtering completed. Results are in ${fastp_outDir}"
 
         log "Generating fastp summary report"
@@ -96,13 +104,10 @@ case "$mode" in
         source "${script_dir}/kraken_pipeline.sh" "${fastp_outDir}"
         log "Kraken-Krona-Bracken analysis and visualization completed. Results are in ${kraken_outDir} and ${phyloseq_outDir}"
         ;;
-
     *)
         echo "Unknown pipeline: ${mode}. Exiting."
         exit 1
         ;;
-
 esac
-
 
 log "Pipeline completed successfully."
