@@ -127,7 +127,7 @@ raw_data/
  
 ## Sample sheet
 
-Sample groups, used for the plots and the PERMANOVA/PERMDISP tests, are read from the tab-separated file set as `sample_sheet` in `config.sh`. It needs a header with at least the columns `sample` (the sample directory name in `raw_data`) and `group`:
+Sample groups, used for the plots and the PERMANOVA/PERMDISP tests, are read from the tab-separated file set as `sample_sheet` in `config.sh`. It needs a header with at least the columns `sample` (the sample directory name in `raw_data`, or its short label, see below) and `group`:
 
 ```
 sample	group
@@ -152,6 +152,7 @@ There is a `--rerun` option for the pipeline to skip the common preprocessing st
  
 
 - **`combine_bracken_outputs.py` requires a local modification.** Per the comment in `kraken_pipeline.sh`, the stock script must be patched to append the taxon ID to the name (`name = f"{name}-{taxid}"`). The stock script keys taxa by name and exits when the same name appears with different taxonomy IDs (common in SILVA, e.g. `uncultured`). `phyloseq.R` removes only this trailing `-<taxid>` to get the genus name, so genus names containing hyphens (e.g. `Escherichia-Shigella`) are kept intact.
+- **Sample labels in plots and tables.** Plots, Krona and the R output tables label each sample with the part of its name before the first `_` (e.g. `0EL_L001-ds.ddab8d8c...` → `0EL`). If two samples would get the same label, the full sample names are used instead. The intermediate files (cutadapt, fastp, Kraken2, Bracken) keep the full names.
 - **Sample grouping without a sample sheet.** When no sample sheet is found, `phyloseq.R` and `dada2.R` infer the groups from the sample names via the regex `^[0-9]*([A-Z]+).*` (leading digits stripped, then leading uppercase letters taken as the group). Rename samples accordingly, or use a [sample sheet](#sample-sheet).
 - **Primers** in the default config should be updated according to amplicon region.
 - The databases for both Kraken and DADA must be built/downloaded separately and their path set in `config.sh` before running.

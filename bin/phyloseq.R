@@ -44,6 +44,22 @@ otu <- bracken[, count_cols]
 # Remove "_num" from sample names
 colnames(otu) <- sub("_num$", "", colnames(otu))
 
+# Short sample labels for the plots and tables: the part of the name before the first "_"
+# (e.g. 0EL_L001-ds.ddab8d8c... -> 0EL). If two samples would get the same label, the full names are kept.
+short_sample_names <- function(full_names) {
+  short <- sub("_.*", "", full_names)
+  if (anyDuplicated(short)) {
+    cat("Shortened sample names are not unique. Using the full sample names.\n")
+    return(full_names)
+  }
+  short
+}
+
+# Full sample names (used to match the sample sheet), named by their short label
+full_sample_names <- colnames(otu)
+colnames(otu) <- short_sample_names(full_sample_names)
+names(full_sample_names) <- colnames(otu)
+
 # Genus names, without the "-taxid" suffix added by the modified combine_bracken_outputs.py.
 # Only the trailing taxid is removed, so genus names containing hyphens (e.g. Escherichia-Shigella) are kept intact.
 # Names without the suffix (stock combine_bracken_outputs.py) are kept as they are
@@ -85,21 +101,23 @@ SAM <- sample_data(meta)
 # Sample groups
 # ===============================
 # Groups are read from the sample sheet (tab-separated, columns "sample" and "group") if it exists,
-# otherwise they are inferred from the sample names. The regex pattern captures:
+# otherwise they are inferred from the (short) sample names. The regex pattern captures:
 # - optional numbers at the beginning
 # - followed by uppercase letters (lowercase letters are ignored)
-get_groups <- function(samples, sample_sheet) {
+get_groups <- function(samples, sample_sheet, full_names = samples) {
   if (!is.na(sample_sheet) && nzchar(sample_sheet) && file.exists(sample_sheet)) {
     cat("Reading sample groups from:", sample_sheet, "\n")
     sheet <- read.delim(sample_sheet, header = TRUE, sep = "\t", check.names = FALSE, stringsAsFactors = FALSE)
     if (!all(c("sample", "group") %in% colnames(sheet))) {
       stop("Sample sheet must contain the columns 'sample' and 'group': ", sample_sheet)
     }
-    missing <- setdiff(samples, sheet$sample)
-    if (length(missing) > 0) {
-      stop("Samples missing from the sample sheet: ", paste(missing, collapse = ", "))
+    # The sample sheet may contain either the full sample names or the short labels
+    idx <- match(full_names, sheet$sample)
+    idx[is.na(idx)] <- match(samples[is.na(idx)], sheet$sample)
+    if (anyNA(idx)) {
+      stop("Samples missing from the sample sheet: ", paste(full_names[is.na(idx)], collapse = ", "))
     }
-    return(as.character(sheet$group[match(samples, sheet$sample)]))
+    return(as.character(sheet$group[idx]))
   }
   cat("No sample sheet found. Inferring groups from sample names.\n")
   sub("^[0-9]*([A-Z]+).*", "\\1", samples)
@@ -120,7 +138,7 @@ ps <- phyloseq(OTU, TAX, SAM)
 # Get sample names
 samples <- sample_names(ps)
 
-group <- get_groups(samples, sample_sheet)
+group <- get_groups(samples, sample_sheet, unname(full_sample_names[samples]))
 
 # Add group information to phyloseq metadata
 sample_data(ps)$Group <- group

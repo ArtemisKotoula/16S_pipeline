@@ -62,11 +62,27 @@ krona_update=$(find "$(dirname "$(which ktImportTaxonomy)")"/.. -name updateTaxo
 
 "$krona_update"
 
-# One "file,sample_name" argument per sample
-kr_report_files=()
+# One "file,sample_label" argument per sample.
+# The label is the part of the sample name before the first "_" (as in the phyloseq plots),
+# unless that would give two samples the same label
+kr_files=()
+kr_labels=()
 for f in "${kraken_res}/"*_kraken_output.txt; do
     sample=$(basename "${f}" "_kraken_output.txt")
-    kr_report_files+=("${f},${sample}")
+    kr_files+=("${f}")
+    kr_labels+=("${sample%%_*}")
+done
+
+if [[ -n "$(printf '%s\n' "${kr_labels[@]}" | sort | uniq -d)" ]]; then
+    echo "Shortened sample names are not unique. Using the full sample names in Krona."
+    for i in "${!kr_files[@]}"; do
+        kr_labels[i]=$(basename "${kr_files[i]}" "_kraken_output.txt")
+    done
+fi
+
+kr_report_files=()
+for i in "${!kr_files[@]}"; do
+    kr_report_files+=("${kr_files[i]},${kr_labels[i]}")
 done
 
 ktImportTaxonomy -q 2 -t 3 "${kr_report_files[@]}" -o "${krona_outDir}/krona_all_samples.html"
