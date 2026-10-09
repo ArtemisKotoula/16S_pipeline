@@ -8,14 +8,21 @@
 
 set -euo pipefail
 
-if [[ $# -ne 2 ]]; then
-    echo "Usage: $0 <input_dir> <output_dir>"
+if [[ $# -ne 6 ]]; then
+    echo "Usage: $0 <input_dir> <output_dir> <failed_cutoff_dir> <frequency> <confidence> <min_reads>"
     exit 1
 fi
 
 
 fastIn_dir="$1"
 reportOut_dir="$2"
+calc_cutoff_outDir="$3"
+frequency="$4"
+confidence="$5"
+min_reads="$6"
+
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${script_dir}/config/conda.sh"
 
 activate_dada
 
@@ -82,12 +89,15 @@ echo "Average Filtered Reads: ${avg_filtered_reads}"
 echo -e "Average Filtered Mean Length R1+R2: ${avg_mean_l}"
 } >> "${summaryOut_file}"
 
+# Store the average filtered read length, so the Kraken branch can use it as the Bracken read length
+echo "${avg_mean_l}" > "${reportOut_dir}/avg_mean_length.txt"
+
 echo "fastp summary reports generated at ${reportOut_file} and ${summaryOut_file}"
 
 echo "Calculating cutoff values for filtering"
 mkdir -p "${calc_cutoff_outDir}"
 
-# Parameters have been set in config.sh
+# Parameters are passed from config.sh by 16S_main.sh
 min_reads_required=$(python "${script_dir}/calc_cutoff.py"\
     --frequency "${frequency}"\
     --confidence "${confidence}"\

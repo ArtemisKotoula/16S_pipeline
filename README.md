@@ -94,6 +94,7 @@ All paths, primers, and thresholds live in one file:
 |---|---|---|
 | `threads` | Number of threads used across steps | `12` |
 | `raw_data` | Path to raw FASTQ input directory | - |
+| `sample_sheet` | Optional tab-separated sample sheet with the sample groups (see [Sample sheet](#sample-sheet)) | `./samplesheet.tsv` |
 | `out_dir` | Timestamped root output directory for the run | `results/16S_<timestamp>` |
 | `r1_primer` / `r2_primer` | Forward/reverse primer sequences trimmed by cutadapt | - |
 | `frequency` | Expected minimum taxon frequency for the depth cutoff calculation | `0.01` |
@@ -111,7 +112,7 @@ Edit these values (in particular `raw_data`, `out_dir`, `kraken_db` / `dada_db`,
  
 ## Expected input structure
  
-Raw data should be organized as one subdirectory per sample, each containing a forward and reverse read file with `R1`/`R2` in the filename (`.fastq` or `.fastq.gz`):
+Raw data should be organized as one subdirectory per sample, each containing exactly one forward and one reverse read file (`.fastq` or `.fastq.gz`). `R1`/`R2` must appear in the filename as a separate token, i.e. preceded by `_`, `.` or `-` (e.g. `Sample1_R1.fastq.gz` or `Sample1_S1_L001_R1_001.fastq.gz`). Samples without exactly one R1 and one R2 file are skipped with a warning.
  
 ```
 raw_data/
@@ -124,6 +125,19 @@ raw_data/
 └── ...
 ```
  
+## Sample sheet
+
+Sample groups, used for the plots and the PERMANOVA/PERMDISP tests, are read from the tab-separated file set as `sample_sheet` in `config.sh`. It needs a header with at least the columns `sample` (the sample directory name in `raw_data`, or its short label, see below) and `group`:
+
+```
+sample	group
+1CTR_A	CTR
+2CTR_B	CTR
+1TRT_A	TRT
+```
+
+Every sample that reaches the analysis step must be listed; extra rows (e.g. samples removed by the depth cutoff) are ignored. If the file does not exist, groups are inferred from the sample names (see [Notes](#notes-and-known-limitations)).
+
 ## Usage
 
 ```bash
@@ -137,13 +151,17 @@ There is a `--rerun` option for the pipeline to skip the common preprocessing st
 ## Notes and known limitations
  
 
-- **`combine_bracken_outputs.py` requires a local modification.** Per the comment in `kraken_pipeline.sh`, the stock script must be patched to append the taxon ID to the name (`name = f"{name}-{taxid}"`) to avoid duplicate row names when combining outputs — otherwise `phyloseq.R` will fail to build unique taxa names.
-- **Sample grouping in `phyloseq.R`** is inferred from sample names via the regex `^[0-9]*([A-Z]+).*` (leading digits stripped, then leading uppercase letters taken as the group). Rename samples accordingly, or adjust this regex if your sample naming convention differs.
+- **`combine_bracken_outputs.py` requires a local modification.** Per the comment in `kraken_pipeline.sh`, the stock script must be patched to append the taxon ID to the name (`name = f"{name}-{taxid}"`). The stock script keys taxa by name and exits when the same name appears with different taxonomy IDs (common in SILVA, e.g. `uncultured`). `phyloseq.R` removes only this trailing `-<taxid>` to get the genus name, so genus names containing hyphens (e.g. `Escherichia-Shigella`) are kept intact.
+- **Sample labels in plots and tables.** Plots, Krona and the R output tables label each sample with the part of its name before the first `_` (e.g. `0EL_L001-ds.ddab8d8c...` → `0EL`). If two samples would get the same label, the full sample names are used instead. The intermediate files (cutadapt, fastp, Kraken2, Bracken) keep the full names.
+- **Sample grouping without a sample sheet.** When no sample sheet is found, `phyloseq.R` and `dada2.R` infer the groups from the sample names via the regex `^[0-9]*([A-Z]+).*` (leading digits stripped, then leading uppercase letters taken as the group). Rename samples accordingly, or use a [sample sheet](#sample-sheet).
 - **Primers** in the default config should be updated according to amplicon region.
 - The databases for both Kraken and DADA must be built/downloaded separately and their path set in `config.sh` before running.
 
 - **How the depth cutoff is calculated.** `calc_cutoff.py` finds the minimum total read count `N` needed so that a taxon at relative abundance `frequency` has at least a `confidence` probability of getting `min_reads` reads, using a Binomial(N, `frequency`) model. `report_fastp.sh` then moves any sample below that cutoff, from the fastp output directory into a "failed cutoff samples" directory, so that it is not included in the downstream analysis.
 - `report_fastp.sh` computes `avg_mean_l` — the average of the post-filtering R1 and R2 mean read lengths across all samples — from the fastp summary statistics it just aggregated. Later, it is used as the read-length parameter for both the Bracken database build (`bracken-build -l ${avg_mean_l}`) and every per-sample Bracken run (`bracken -r ${avg_mean_l}`), so Bracken's abundance re-distribution is matched to the actual (filtered) read length of the dataset rather than a hardcoded value.
+
+- The DADA2 branch also writes the per-sample read tracking table (`read_tracking.csv`), the ASV sequences (`ASVs.fasta`), the ASV count table (`ASV_counts.tsv`), the ASV taxonomy (`ASV_taxonomy.tsv`) and the phyloseq object (`phyloseq_object.rds`), all linked by ASV ID.
+- A fixed random seed is set in `dada2.R` and `phyloseq.R`, so NMDS and the PERMANOVA p-values are reproducible between runs.
 
 - In order to limit DADA to a specified number of threads, the `taskset` command is used. The dada processes are then limited to the first N threads of the system, specified by the `threads` parameter in `config.sh`.
 
