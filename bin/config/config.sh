@@ -5,6 +5,11 @@ threads=4
 # Input raw data directory
 raw_data="./data"
 
+# Optional sample sheet: tab-separated, with a header containing at least the columns "sample" and "group".
+# "sample" must match the sample directory names in raw_data.
+# If the file does not exist, groups are inferred from the sample names (regex ^[0-9]*([A-Z]+).*).
+sample_sheet="./samplesheet.tsv"
+
 # Output directory
 results_dir="./16S_results"
 out_dir="${results_dir}/16S_$(date '+%Y%m%d_%H%M%S')"

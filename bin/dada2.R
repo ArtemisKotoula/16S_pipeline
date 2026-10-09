@@ -12,7 +12,7 @@ for (package_name in packages) {
 args <- commandArgs(trailingOnly = TRUE)
 
 if (length(args) < 5) {
-  stop("dada2.R needs to be run with an input path, an output directory a right and a left filter length and the dada database path.")
+  stop("dada2.R needs to be run with an input path, an output directory a right and a left filter length and the dada database path (and optionally a sample sheet).")
 }
 
 path <- args[1]
@@ -20,6 +20,10 @@ out_path <- args[2]
 right_length <- as.numeric(args[3])
 left_length <- as.numeric(args[4])
 dada_db <- args[5]
+sample_sheet <- if (length(args) >= 6) args[6] else NA
+
+# Fixed seed so that NMDS and the PERMANOVA (adonis2) permutation p-values are reproducible
+set.seed(1234)
 
 cat("Reading from:", path, "\n")
 cat("Writing to:", out_path, "\n")
@@ -31,8 +35,34 @@ cat("Filter lengths: right =", right_length, ", left =", left_length, "\n")
 fnFs <- sort(list.files(path, pattern="_R1_filtered.fastq", full.names = TRUE, recursive = TRUE))
 fnRs <- sort(list.files(path, pattern="_R2_filtered.fastq", full.names = TRUE, recursive = TRUE))
 
-# Extract sample names, assuming filenames have format: SAMPLENAME_XXX.fastq
-sample.names <- sapply(strsplit(basename(fnFs), "_"), `[`, 1)
+# Extract sample names, filenames have format: SAMPLENAME_R1_filtered.fastq
+# (sample names may contain "_", so only the suffix is removed)
+sample.names <- sub("_R1_filtered\\.fastq$", "", basename(fnFs))
+
+# Sample groups
+# Groups are read from the sample sheet (tab-separated, columns "sample" and "group") if it exists,
+# otherwise they are inferred from the sample names. The regex pattern captures:
+# - optional numbers at the beginning
+# - followed by uppercase letters (lowercase letters are ignored)
+get_groups <- function(samples, sample_sheet) {
+  if (!is.na(sample_sheet) && nzchar(sample_sheet) && file.exists(sample_sheet)) {
+    cat("Reading sample groups from:", sample_sheet, "\n")
+    sheet <- read.delim(sample_sheet, header = TRUE, sep = "\t", check.names = FALSE, stringsAsFactors = FALSE)
+    if (!all(c("sample", "group") %in% colnames(sheet))) {
+      stop("Sample sheet must contain the columns 'sample' and 'group': ", sample_sheet)
+    }
+    missing <- setdiff(samples, sheet$sample)
+    if (length(missing) > 0) {
+      stop("Samples missing from the sample sheet: ", paste(missing, collapse = ", "))
+    }
+    return(as.character(sheet$group[match(samples, sheet$sample)]))
+  }
+  cat("No sample sheet found. Inferring groups from sample names.\n")
+  sub("^[0-9]*([A-Z]+).*", "\\1", samples)
+}
+
+# Read the groups before running DADA2, so that sample sheet errors are reported immediately
+sample.groups <- get_groups(sample.names, sample_sheet)
 
 QplotF <- plotQualityProfile(fnFs[1:2])
 
@@ -83,6 +113,9 @@ track <- cbind(out, sapply(dadaFs, getN), sapply(dadaRs, getN), sapply(mergers, 
 colnames(track) <- c("input", "filtered", "denoisedF", "denoisedR", "merged", "nonchim")
 rownames(track) <- sample.names
 
+# Number of reads kept at each step, per sample
+write.csv(track, file = file.path(out_path, "read_tracking.csv"), row.names = TRUE)
+
 taxa <- assignTaxonomy(seqtab.nochim, dada_db, multithread=TRUE)
 
 taxa.print <- taxa # Removing sequence rownames for display only
@@ -90,10 +123,33 @@ rownames(taxa.print) <- NULL
 
 write.csv(taxa.print, file = file.path(out_path, "taxa_Genus.csv"), row.names = FALSE)
 
+###############################################################
+# ASV outputs, linked by ASV ID
+asv_seqs <- colnames(seqtab.nochim)
+asv_ids <- sprintf("ASV%d", seq_along(asv_seqs))
+
+# ASV sequences
+writeXStringSet(DNAStringSet(setNames(asv_seqs, asv_ids)), file.path(out_path, "ASVs.fasta"))
+
+# ASV counts (rows: ASVs, columns: samples)
+asv_counts <- t(seqtab.nochim)
+rownames(asv_counts) <- asv_ids
+write.table(
+  data.frame(ASV_ID = asv_ids, asv_counts, check.names = FALSE),
+  file = file.path(out_path, "ASV_counts.tsv"), sep = "\t", quote = FALSE, row.names = FALSE
+)
+
+# ASV taxonomy
+asv_taxa <- taxa[match(asv_seqs, rownames(taxa)), , drop = FALSE]
+write.table(
+  data.frame(ASV_ID = asv_ids, Sequence = asv_seqs, asv_taxa, check.names = FALSE),
+  file = file.path(out_path, "ASV_taxonomy.tsv"), sep = "\t", quote = FALSE, row.names = FALSE
+)
+
 print("Starting phyloseq visualization")
 
 samdf <- data.frame(
-  SampleID = sample.names, Group = sub("^[0-9]*([A-Z]+).*", "\\1", sample.names), row.names = sample.names
+  SampleID = sample.names, Group = sample.groups, row.names = sample.names
 )
 
 OTU <- otu_table(seqtab.nochim, taxa_are_rows = FALSE)
@@ -104,6 +160,9 @@ ps <- phyloseq(OTU, TAX, SAM)
 
 ps <- prune_samples(sample_sums(ps) > 0, ps)
 # ps <- prune_taxa(taxa_sums(ps) > 0, ps)
+
+# Save the phyloseq object for further analysis
+saveRDS(ps, file = file.path(out_path, "phyloseq_object.rds"))
 
 # Order samples by Group
 sample_order <- order(sample_data(ps)$Group)

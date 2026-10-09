@@ -2,13 +2,24 @@
 
 set -euo pipefail
 
-# Input argument
-input_dir="$1"
-
-if [[ -z "$input_dir" ]]; then
-    echo "Usage: bash kraken_pipeline.sh <input_directory>"
+if [[ $# -lt 8 || $# -gt 9 ]]; then
+    echo "Usage: bash kraken_pipeline.sh <input_directory> <kraken_outDir> <krona_outDir> <bracken_outDir> <phyloseq_outDir> <kraken_db> <threads> <read_length> [sample_sheet]"
     exit 1
 fi
+
+# Input arguments
+input_dir="$1"
+kraken_outDir="$2"
+krona_outDir="$3"
+bracken_outDir="$4"
+phyloseq_outDir="$5"
+kraken_db="$6"
+threads="$7"
+avg_mean_l="$8"
+sample_sheet="${9:-}"
+
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${script_dir}/config/conda.sh"
 
 activate_kraken
 
@@ -28,7 +39,7 @@ for sample_dir in "${input_dir}"/*; do
     R2="${input_dir}/${sample_name}/${sample_name}_R2_filtered.fastq"
 
     if [[ ! -f "${R1}" || ! -f "${R2}" ]]; then
-        log "Kraken input files for sample ${sample_name} not found. Instead R1 file is set as: ${R1}. Skipping."
+        echo "Kraken input files for sample ${sample_name} not found. Instead R1 file is set as: ${R1}. Skipping."
         continue
     fi
 
@@ -51,13 +62,14 @@ krona_update=$(find "$(dirname "$(which ktImportTaxonomy)")"/.. -name updateTaxo
 
 "$krona_update"
 
-kr_report_files=""
+# One "file,sample_name" argument per sample
+kr_report_files=()
 for f in "${kraken_res}/"*_kraken_output.txt; do
-    sample=${f%%_*}
-    kr_report_files="$kr_report_files $f,$sample"
+    sample=$(basename "${f}" "_kraken_output.txt")
+    kr_report_files+=("${f},${sample}")
 done
 
-ktImportTaxonomy -q 2 -t 3 "$kr_report_files" -o "${krona_outDir}/krona_all_samples.html"
+ktImportTaxonomy -q 2 -t 3 "${kr_report_files[@]}" -o "${krona_outDir}/krona_all_samples.html"
 # -q 2 = read ID is in column 2
 #-t 3 = taxonomy ID is in column 3
 
@@ -83,7 +95,6 @@ done
 sample_names=()
 for bracken_file in "${bracken_outDir}"/*.bracken; do
     sample_name=$(basename "${bracken_file}" ".bracken")
-    sample_name=${sample_name%%_*}
     sample_names+=("${sample_name}")
 done
 
@@ -98,6 +109,7 @@ combine_bracken_outputs.py --files "${bracken_outDir}"/*.bracken \
 --names "${sample_names}" \
 --output "${bracken_outDir}/genus_abundance.tsv"        
 #modified script, adding "name = f"{name}-{taxid}" after line 106 to avoid duplicate names in the combined output file
+# (the stock script exits when the same name has different taxonomy IDs, e.g. "uncultured" in SILVA)
 
 echo "Bracken analysis completed. Results are in ${bracken_outDir}"
 
@@ -106,7 +118,7 @@ echo "Starting visualization of Bracken results with phyloseq"
 
 activate_dada
 
-Rscript "${script_dir}/phyloseq.R" "${bracken_outDir}/genus_abundance.tsv" "${phyloseq_outDir}"
+Rscript "${script_dir}/phyloseq.R" "${bracken_outDir}/genus_abundance.tsv" "${phyloseq_outDir}" "${sample_sheet}"
 
 echo "Phyloseq visualization completed. Results are in ${phyloseq_outDir}"
 

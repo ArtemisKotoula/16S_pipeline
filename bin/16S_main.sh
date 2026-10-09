@@ -15,6 +15,8 @@ script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${script_dir}/config/config.sh"
 source "${script_dir}/config/conda.sh"
 
+setup_conda_envs
+
 # LOG FUNCTION
 log(){
     echo "[$(date '+%F %T')] --- $1"
@@ -55,15 +57,15 @@ case "$skip_pre" in
         log "Starting preprocessing steps."
 
         log "Starting QC on raw reads"
-        source "${script_dir}/parallel_qc.sh" "${raw_data}" "${fastqc_outDir}/raw" "${multiqc_outDir}/raw" "${threads}"
+        bash "${script_dir}/parallel_qc.sh" "${raw_data}" "${fastqc_outDir}/raw" "${multiqc_outDir}/raw" "${threads}"
         log "Qc for raw reads completed. Results are in ${fastqc_outDir}/raw and ${multiqc_outDir}/raw"
 
         log "Starting trimming of primers from raw reads"
-        source "${script_dir}/trim.sh" "${raw_data}" "${cutadapt_outDir}" "${r1_primer}" "${r2_primer}" "${threads}" "${min_length}"
+        bash "${script_dir}/trim.sh" "${raw_data}" "${cutadapt_outDir}" "${r1_primer}" "${r2_primer}" "${threads}" "${min_length}"
         log "Trimming completed. Results are in ${cutadapt_outDir}"
 
         log "Starting QC on trimmed reads"
-        source "${script_dir}/parallel_qc.sh" "${cutadapt_outDir}" "${fastqc_outDir}/trimmed" "${multiqc_outDir}/trimmed" "${threads}"
+        bash "${script_dir}/parallel_qc.sh" "${cutadapt_outDir}" "${fastqc_outDir}/trimmed" "${multiqc_outDir}/trimmed" "${threads}"
         log "Qc for trimmed reads completed. Results are in ${fastqc_outDir}/trimmed and ${multiqc_outDir}/trimmed" 
         ;;
 esac
@@ -72,36 +74,39 @@ esac
 case "$mode" in
     dada)
         log "Starting quality filtering of trimmed reads for DADA2"
-        source "${script_dir}/fastp.sh" -in "${cutadapt_outDir}" -out "${fastp_outDir}" -t "${threads}" -min_len "${min_length}" -lenR "${right_len}" -lenL "${left_len}"
+        bash "${script_dir}/fastp.sh" -mode dada -in "${cutadapt_outDir}" -out "${fastp_outDir}" -t "${threads}" -min_len "${min_length}" -lenR "${right_len}" -lenL "${left_len}"
         log "Quality filtering completed. Results are in ${fastp_outDir}"
 
         log "Generating fastp summary report"
-        source "${script_dir}/report_fastp.sh" "${fastp_outDir}" "${report_fastp_outDir}"
+        bash "${script_dir}/report_fastp.sh" "${fastp_outDir}" "${report_fastp_outDir}" "${calc_cutoff_outDir}" "${frequency}" "${confidence}" "${min_reads}"
         log "fastp summary report generated. Results are in ${report_fastp_outDir}. Samples that do not meet the cutoff criteria have been moved to ${calc_cutoff_outDir}"
 
         log "Starting QC on filtered reads"
-        source "${script_dir}/parallel_qc.sh" "${fastp_outDir}" "${fastqc_outDir}/filtered" "${multiqc_outDir}/filtered" "${threads}"
+        bash "${script_dir}/parallel_qc.sh" "${fastp_outDir}" "${fastqc_outDir}/filtered" "${multiqc_outDir}/filtered" "${threads}"
         log "Qc for filtered reads completed. Results are in ${fastqc_outDir}/filtered and ${multiqc_outDir}/filtered"
 
         log "Starting DADA2 analysis"
-        source "${script_dir}/dada_pipeline.sh" "${fastp_outDir}"
+        bash "${script_dir}/dada_pipeline.sh" "${fastp_outDir}" "${dada2_outDir}" "${threads}" "${right_len}" "${left_len}" "${dada_db}" "${sample_sheet:-}"
         log "DADA2 analysis completed. Results are in ${dada2_outDir}"
         ;;
     kraken)
         log "Starting quality filtering of trimmed reads for Kraken"
-        source "${script_dir}/fastp.sh" -in "${cutadapt_outDir}" -out "${fastp_outDir}" -t "${threads}" -min_len "${min_length}" -qt "${quality_threshold}"   
+        bash "${script_dir}/fastp.sh" -mode kraken -in "${cutadapt_outDir}" -out "${fastp_outDir}" -t "${threads}" -min_len "${min_length}" -qt "${quality_threshold}"
         log "Quality filtering completed. Results are in ${fastp_outDir}"
 
         log "Generating fastp summary report"
-        source "${script_dir}/report_fastp.sh" "${fastp_outDir}" "${report_fastp_outDir}"
+        bash "${script_dir}/report_fastp.sh" "${fastp_outDir}" "${report_fastp_outDir}" "${calc_cutoff_outDir}" "${frequency}" "${confidence}" "${min_reads}"
         log "fastp summary report generated. Results are in ${report_fastp_outDir}. Samples that do not meet the cutoff criteria have been moved to ${calc_cutoff_outDir}"
 
         log "Starting QC on filtered reads"
-        source "${script_dir}/parallel_qc.sh" "${fastp_outDir}" "${fastqc_outDir}/filtered" "${multiqc_outDir}/filtered" "${threads}"
+        bash "${script_dir}/parallel_qc.sh" "${fastp_outDir}" "${fastqc_outDir}/filtered" "${multiqc_outDir}/filtered" "${threads}"
         log "Qc for filtered reads completed. Results are in ${fastqc_outDir}/filtered and ${multiqc_outDir}/filtered"
 
         log "Starting Kraken-Krona-Bracken analysis"
-        source "${script_dir}/kraken_pipeline.sh" "${fastp_outDir}"
+        # Average filtered read length, written by report_fastp.sh, used as the Bracken read length
+        avg_mean_l=$(cat "${report_fastp_outDir}/avg_mean_length.txt")
+
+        bash "${script_dir}/kraken_pipeline.sh" "${fastp_outDir}" "${kraken_outDir}" "${krona_outDir}" "${bracken_outDir}" "${phyloseq_outDir}" "${kraken_db}" "${threads}" "${avg_mean_l}" "${sample_sheet:-}"
         log "Kraken-Krona-Bracken analysis and visualization completed. Results are in ${kraken_outDir} and ${phyloseq_outDir}"
         ;;
     *)

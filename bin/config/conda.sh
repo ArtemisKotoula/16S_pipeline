@@ -1,33 +1,30 @@
 #!/usr/bin/env bash
 
-source "$(conda info --base)/etc/profile.d/conda.sh"
+# Sourced by 16S_main.sh and by every step script.
+# Only defines functions; environments are created once by setup_conda_envs (called from 16S_main.sh).
 
-echo "Creating conda environments."
+# CONDA_EXE is exported by conda's shell hook, so step scripts started as subprocesses can still find conda
+conda_base="$("${CONDA_EXE:-conda}" info --base)"
+source "${conda_base}/etc/profile.d/conda.sh"
 
-env_names=("16Sdada" "16Scutadapt" "16Skraken")
+conda_config_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-conda config --set channel_priority flexible
+setup_conda_envs() {
+    echo "Creating conda environments."
 
-for env_name in "${env_names[@]}"; do
-    if conda env list | grep -q "$env_name"; then
-        echo "Conda environment '$env_name' already exists. Skipping creation."
-    else
-        echo "Creating conda environment '$env_name'..."
-        case "$env_name" in
-            "16Sdada")
-                conda env create -f "${script_dir}/config/${env_name}_env.yml"
-                ;;
-            "16Scutadapt")
-                conda env create -f "${script_dir}/config/${env_name}_env.yml"
-                ;;
-            "16Skraken")
-                conda env create -f "${script_dir}/config/${env_name}_env.yml"
-                ;;
-        esac
-    fi
-done
+    local env_names=("16Sdada" "16Scutadapt" "16Skraken")
 
+    conda config --set channel_priority flexible
 
+    for env_name in "${env_names[@]}"; do
+        if conda env list | grep -q "$env_name"; then
+            echo "Conda environment '$env_name' already exists. Skipping creation."
+        else
+            echo "Creating conda environment '$env_name'..."
+            conda env create -f "${conda_config_dir}/${env_name}_env.yml"
+        fi
+    done
+}
 
 activate_dada() {
     set +u

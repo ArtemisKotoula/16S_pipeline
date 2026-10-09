@@ -12,6 +12,9 @@ FoutDir="$2"
 MoutDir="$3"
 threads="$4"
 
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${script_dir}/config/conda.sh"
+
 # Activate conda environment
 activate_dada
 

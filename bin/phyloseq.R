@@ -7,11 +7,15 @@
 args <- commandArgs(trailingOnly = TRUE)
 
 if (length(args) < 2) {
-  stop("Phyloseq needs to be run with both an input path and an output directory.")
+  stop("Phyloseq needs to be run with both an input path and an output directory (and optionally a sample sheet).")
 }
 
 input_path <- args[1]
 output_dir <- args[2]
+sample_sheet <- if (length(args) >= 3) args[3] else NA
+
+# Fixed seed so that NMDS and the PERMANOVA (adonis2) permutation p-values are reproducible
+set.seed(1234)
 
 cat("Reading from:", input_path, "\n", "Writing to:", output_dir, "\n")
 
@@ -40,8 +44,24 @@ otu <- bracken[, count_cols]
 # Remove "_num" from sample names
 colnames(otu) <- sub("_num$", "", colnames(otu))
 
-# Use Bracken names as taxa names
-rownames(otu) <- bracken$name
+# Genus names, without the "-taxid" suffix added by the modified combine_bracken_outputs.py.
+# Only the trailing taxid is removed, so genus names containing hyphens (e.g. Escherichia-Shigella) are kept intact.
+# Names without the suffix (stock combine_bracken_outputs.py) are kept as they are
+genus <- if ("taxonomy_id" %in% colnames(bracken)) {
+  taxid_suffix <- paste0("-", bracken$taxonomy_id)
+  ifelse(
+    endsWith(bracken$name, taxid_suffix),
+    substr(bracken$name, 1, nchar(bracken$name) - nchar(taxid_suffix)),
+    bracken$name
+  )
+} else {
+  sub("-[0-9]+$", "", bracken$name)
+}
+
+# Unique taxa names: genus name + taxonomy id
+taxa_ids <- if ("taxonomy_id" %in% colnames(bracken)) paste(genus, bracken$taxonomy_id, sep = "-") else make.unique(bracken$name)
+
+rownames(otu) <- taxa_ids
 
 OTU <- otu_table(as.matrix(otu), taxa_are_rows = TRUE)
 
@@ -49,7 +69,7 @@ OTU <- otu_table(as.matrix(otu), taxa_are_rows = TRUE)
 # Build taxonomy table
 # ===============================
 
-tax <- data.frame(Kingdom = "Bacteria", Genus = sub("-.*", "", bracken$name), row.names = bracken$name, stringsAsFactors = FALSE)
+tax <- data.frame(Kingdom = "Bacteria", Genus = genus, row.names = taxa_ids, stringsAsFactors = FALSE)
 
 TAX <- tax_table(as.matrix(tax))
 
@@ -60,6 +80,30 @@ TAX <- tax_table(as.matrix(tax))
 meta <- data.frame(SampleID = colnames(otu), row.names = colnames(otu), stringsAsFactors = FALSE)
 
 SAM <- sample_data(meta)
+
+# ===============================
+# Sample groups
+# ===============================
+# Groups are read from the sample sheet (tab-separated, columns "sample" and "group") if it exists,
+# otherwise they are inferred from the sample names. The regex pattern captures:
+# - optional numbers at the beginning
+# - followed by uppercase letters (lowercase letters are ignored)
+get_groups <- function(samples, sample_sheet) {
+  if (!is.na(sample_sheet) && nzchar(sample_sheet) && file.exists(sample_sheet)) {
+    cat("Reading sample groups from:", sample_sheet, "\n")
+    sheet <- read.delim(sample_sheet, header = TRUE, sep = "\t", check.names = FALSE, stringsAsFactors = FALSE)
+    if (!all(c("sample", "group") %in% colnames(sheet))) {
+      stop("Sample sheet must contain the columns 'sample' and 'group': ", sample_sheet)
+    }
+    missing <- setdiff(samples, sheet$sample)
+    if (length(missing) > 0) {
+      stop("Samples missing from the sample sheet: ", paste(missing, collapse = ", "))
+    }
+    return(as.character(sheet$group[match(samples, sheet$sample)]))
+  }
+  cat("No sample sheet found. Inferring groups from sample names.\n")
+  sub("^[0-9]*([A-Z]+).*", "\\1", samples)
+}
 
 # ===============================
 # Build phyloseq object
@@ -76,14 +120,7 @@ ps <- phyloseq(OTU, TAX, SAM)
 # Get sample names
 samples <- sample_names(ps)
 
-# Extract group name, based on the prefix of the sample name. The regex pattern captures:
-# - optional numbers at the beginning
-# - letters
-# - optional numbers after the letters
-# - followed by "_"
-# group <- sub("^[0-9]*([A-Za-z]+).*", "\\1", samples) # doesnt ignore lowercase letters
-
-group <- sub("^[0-9]*([A-Z]+).*", "\\1", samples) #Also igenores lowercase letters
+group <- get_groups(samples, sample_sheet)
 
 # Add group information to phyloseq metadata
 sample_data(ps)$Group <- group
@@ -103,8 +140,8 @@ ps.rel <- transform_sample_counts(ps,function(x) x / sum(x))
 # Calculate total abundance of each genus across all samples
 taxa_abundance <- taxa_sums(ps.rel)
 
-# Get the top 30 most abundant genera
-top <- names(sort(taxa_abundance, decreasing = TRUE))[1:30]
+# Get the top 30 most abundant genera (or all of them, if there are fewer than 30)
+top <- names(sort(taxa_abundance, decreasing = TRUE))[seq_len(min(30, length(taxa_abundance)))]
 
 # Keep the top 30
 ps.top <- prune_taxa(top, ps.rel)
